@@ -31,13 +31,18 @@
  * At this stage, we only support a subset of possible cron options. 
  * For example, each cron entry can only be digits or "*", no commas
  * to denote multiple entries. We also limit the allowed combinations:
- * - Every minute : * * * * *
- * - Every hour   : ? * * * *
- * - Every day    : ? ? * * *
- * - Every week   : ? ? * * ?
- * - Every month  : ? ? ? * *
- * - Every year   : ? ? ? ? *
+ *   - Every minute     : * * * * *
+ *   - Every hour       : ? * * * *
+ *   - Every day        : ? ? * * *
+ *   - Every week       : ? ? * * ?
+ *   - Every month      : ? ? ? * *
+ *   - Every year       : ? ? ? ? *
  */
+ //* - Every (n) minutes: */? * * * *
+ //* - Every (n) hours  : * */? * * *
+ //* - Every (n) days   : * * */? * *
+ //* - Every (n) months : * * * */? *
+
 (function($) {
     
     var defaults = {
@@ -84,6 +89,34 @@
             rows      : undefined,
             title     : "Time: Minute"
         },
+        nMinuteOpts: {
+            minWidth: 100, // only applies if columns and itemWidth not set
+            itemWidth: 30,
+            columns: 4,
+            rows: undefined,
+            title: "Every (n) minutes"
+        },
+        nHourOpts: {
+            minWidth: 100, // only applies if columns and itemWidth not set
+            itemWidth: 30,
+            columns: 4,
+            rows: undefined,
+            title: "Every (n) hours"
+        },
+        nDayOpts: {
+            minWidth: 100, // only applies if columns and itemWidth not set
+            itemWidth: 30,
+            columns: 4,
+            rows: undefined,
+            title: "Every (n) days"
+        },
+        nMonthOpts: {
+            minWidth: 100, // only applies if columns and itemWidth not set
+            itemWidth: 30,
+            columns: 4,
+            rows: undefined,
+            title: "Every (n) months"
+        },
         effectOpts : {
             openSpeed      : 400,
             closeSpeed     : 400,
@@ -115,7 +148,7 @@
     // options for days of month
     var str_opt_dom = "";
     for (var i = 1; i < 32; i++) {
-        if (i == 1 || i == 21 || i == 31) { var suffix = "st"; } 
+        if (i == 1 || i == 21) { var suffix = "st"; } 
         else if (i == 2 || i == 22) { var suffix = "nd"; } 
         else if (i == 3 || i == 23) { var suffix = "rd"; } 
         else { var suffix = "th"; }
@@ -138,31 +171,67 @@
     for (var i = 0; i < days.length; i++) {
         str_opt_dow += "<option value='"+i+"'>" + days[i] + "</option>\n"; 
     }
+    
+    // options for every (n) minutes
+    var str_opt_n_min = "";
+    for (var u = 1; u < 61; u++) {
+        var t = (u < 10) ? "0" : "";
+        str_opt_n_min += "<option value='*/" + u + "'>" + t + u + "</option>\n"
+    }
+    
+    // options for every (n) hours
+    var str_opt_n_hour = "";
+    for (var u = 1; u < 25; u++) {
+        var t = (u < 10) ? "0" : "";
+        str_opt_n_hour += "<option value='*/" + u + "'>" + t + u + "</option>\n"
+    }
+    
+    // options for every (n) days
+    var str_opt_n_day = "";
+    for (var u = 1; u < 32; u++) {
+        var t = (u < 10) ? "0" : "";
+        str_opt_n_day += "<option value='*/" + u + "'>" + t + u + "</option>\n"
+    }
+    
+    // options for every (n) months
+    var str_opt_n_month = "";
+    for (var u = 1; u < 13; u++) {
+        var t = (u < 10) ? "0" : "";
+        str_opt_n_month += "<option value='*/" + u + "'>" + t + u + "</option>\n"
+    }
 
     // options for period
     var str_opt_period = "";
-    var periods = ["minute", "hour", "day", "week", "month", "year"];
+    var periods = ["minute", "hour", "day", "week", "month", "year","(n) minutes","(n) hours","(n) days","(n) months"];
     for (var i = 0; i < periods.length; i++) {
         str_opt_period += "<option value='"+periods[i]+"'>" + periods[i] + "</option>\n"; 
     }
     
     // display matrix
     var toDisplay = {
-        "minute" : [],
-        "hour"   : ["mins"],
-        "day"    : ["time"],
-        "week"   : ["dow", "time"],
-        "month"  : ["dom", "time"],
-        "year"   : ["dom", "month", "time"]
+        "minute"     : [],
+        "hour"       : ["mins"],
+        "day"        : ["time"],
+        "week"       : ["dow", "time"],
+        "month"      : ["dom", "time"],
+        "year"       : ["dom", "month", "time"],
+        '(n) minutes': ["nmins"],
+        '(n) hours'  : ["nhours"],
+        '(n) days'   : ["ndays"],
+        '(n) months' : ["nmonths"]
     };
     
     var combinations = {
-        "minute" : /^(\*\s){4}\*$/,                    // "* * * * *"
-        "hour"   : /^\d{1,2}\s(\*\s){3}\*$/,           // "? * * * *"
-        "day"    : /^(\d{1,2}\s){2}(\*\s){2}\*$/,      // "? ? * * *"
-        "week"   : /^(\d{1,2}\s){2}(\*\s){2}\d{1,2}$/, // "? ? * * ?"
-        "month"  : /^(\d{1,2}\s){3}\*\s\*$/,           // "? ? ? * *"
-        "year"   : /^(\d{1,2}\s){4}\*$/                // "? ? ? ? *"
+        "minute"      : /^(\*\s){4}\*$/,                     // "* * * * *"
+        "hour"   	 : /^\d{1,2}\s(\*\s){3}\*$/,            // "? * * * *"
+        "day"    	 : /^(\d{1,2}\s){2}(\*\s){2}\*$/,       // "? ? * * *"
+        "week"   	 : /^(\d{1,2}\s){2}(\*\s){2}\d{1,2}$/,  // "? ? * * ?"
+        "month"  	 : /^(\d{1,2}\s){3}\*\s\*$/,            // "? ? ? * *"
+        "year"   	 : /^(\d{1,2}\s){4}\*$/,                // "? ? ? ? *"
+        '(n) minutes': /^\*\/\d{1,2}\s(\*\s){3}\*$/,		// "*/? * * * *"
+        '(n) hours'  : /^\*\s\*\/\d{1,2}\s(\*\s){2}\*$/,	// "* */? * * *"
+        '(n) days'   : /^(\*\s){2}\*\/\d{1,2}\s\*\s\*$/,	// "* * */? * *"  
+        '(n) months' : /^(\*\s){3}\*\/\d{1,2}\s\*$/			// "* * * */? *"
     };
     
     // ------------------ internal functions ---------------
@@ -177,7 +246,7 @@
     
     function getCronType(cron_str) {
         // check format of initial cron value
-        var valid_cron = /^((\d{1,2}|\*)\s){4}(\d{1,2}|\*)$/
+        var valid_cron = /^(((\d{1,2}|\*)|(\*\/\d{1,2}|\*))\s){4}((\d{1,2}|\*)|(\*\/\d{1,2}))$/;
         if (typeof cron_str != "string" || !valid_cron.test(cron_str)) {
             $.error("cron: invalid initial value");
             return undefined;
@@ -189,6 +258,10 @@
         var maxval = [59, 23, 31, 12,  6];
         for (var i = 0; i < d.length; i++) {
             if (d[i] == "*") continue;
+            var incrementRegex = /\*\/\d{1,2}/;
+            if(incrementRegex.test(d[i])){
+                continue;
+            }
             var v = parseInt(d[i]);
             if (defined(v) && v <= maxval[i] && v >= minval[i]) continue;
 
@@ -247,6 +320,28 @@
                 day  = b["dom"].find("select").val();
                 month = b["month"].find("select").val();
                 break;
+        	
+        	case "(n) minutes":
+            	min = b["nmins"].find("select").val();
+            	break;
+            
+        	case "(n) hours":
+            	min = "*";
+            	hour = b["nhours"].find("select").val();
+            	break;
+            
+        	case "(n) days":
+            	min = "*";
+            	hour = "*";
+            	day = b["ndays"].find("select").val();
+            	break;
+            
+        	case "(n) months":
+            	min = "*";
+            	hour = "*";
+            	day = "*";
+            	month = b["nmonths"].find("select").val();
+            	break;
 
             default:
                 // we assume this only happens when customValues is set
@@ -270,7 +365,11 @@
                 monthOpts      : $.extend({}, defaults.monthOpts, eo, options.monthOpts), 
                 dowOpts        : $.extend({}, defaults.dowOpts, eo, options.dowOpts), 
                 timeHourOpts   : $.extend({}, defaults.timeHourOpts, eo, options.timeHourOpts), 
-                timeMinuteOpts : $.extend({}, defaults.timeMinuteOpts, eo, options.timeMinuteOpts)
+                timeMinuteOpts : $.extend({}, defaults.timeMinuteOpts, eo, options.timeMinuteOpts),
+                nMinutieOpts   : $.extend({}, defaults.nMinutieOpts, eo, options.nMinutieOpts),
+                nHourOpts      : $.extend({}, defaults.nHourOpts, eo, options.nHourOpts),
+                nDayOpts       : $.extend({}, defaults.nDayOpts, eo, options.nDayOpts),
+                nMonthOpts     : $.extend({}, defaults.nMonthOpts, eo, options.nMonthOpts)
             });
             
             // error checking
@@ -349,6 +448,46 @@
                     .data("root", this)
                     .end();
 
+            block["nmins"] = $("<span class='cron-block cron-block-nmins'>"
+                    + "<select name='cron-nmins'>" + str_opt_n_min
+                    + "</select></span>")
+                .appendTo(this)
+                .data("root", this)
+                .find("select")
+                    .gentleSelect(o.nMinuteOpts)
+                    .data("root", this)
+                    .end();
+
+            block["nhours"] = $("<span class='cron-block cron-block-nhours'>"
+                    + "<select name='cron-nhours'>" + str_opt_n_hour 
+                    + "</select></span>")
+                .appendTo(this)
+                .data("root", this)
+                .find("select")
+                    .gentleSelect(o.nHourOpts)
+                    .data("root", this)
+                    .end();
+
+            block["ndays"] = $("<span class='cron-block cron-block-ndays'>"
+                    + "<select name='cron-ndays'>" + str_opt_n_day
+                    + "</select></span>")
+                .appendTo(this)
+                .data("root", this)
+                .find("select")
+                    .gentleSelect(o.nDayOpts)
+                    .data("root", this)
+                    .end();
+
+            block["nmonths"] = $("<span class='cron-block cron-block-nmonths'>"
+                    + "<select name='cron-nmonths'>" + str_opt_n_month
+                    + "</select></span>")
+                .appendTo(this)
+                .data("root", this)
+                .find("select")
+                    .gentleSelect(o.nMonthOpts)
+                    .data("root", this)
+                    .end();
+
             block["controls"] = $("<span class='cron-controls'>&laquo; save "
                     + "<span class='cron-button cron-button-save'></span>"
                     + " </span>")
@@ -376,11 +515,15 @@
             var block = this.data("block");
             var d = cron_str.split(" ");
             var v = {
-                "mins"  : d[0],
-                "hour"  : d[1],
-                "dom"   : d[2],
-                "month" : d[3],
-                "dow"   : d[4]
+                "mins"    : d[0],
+                "hour"    : d[1],
+                "dom"     : d[2],
+                "month"   : d[3],
+                "dow"     : d[4],
+                "nmins"   : d[0],
+                "nhours"  : d[1],
+                "ndays"   : d[2],
+                "nmonths" : d[3]
             };
 
             // update appropriate select boxes
